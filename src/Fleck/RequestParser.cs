@@ -10,8 +10,11 @@ namespace Fleck
                                @"\r\n" + //newline
                                @"(?<body>.+)?";
 
-        private static readonly Regex _regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
+#if !PORTABLE
+          private static readonly Regex _regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+#else
+        private static readonly Regex _regex = new Regex(pattern, RegexOptions.IgnoreCase);
+#endif
         public static WebSocketHttpRequest Parse(byte[] bytes)
         {
             return Parse(bytes, "ws");
@@ -19,7 +22,11 @@ namespace Fleck
 
         public static WebSocketHttpRequest Parse(byte[] bytes, string scheme)
         {
+#if PORTABLE
+            var body = Encoding.UTF8.GetString(bytes,0,bytes.Length);
+#else
             var body = Encoding.UTF8.GetString(bytes);
+#endif
             Match match = _regex.Match(body);
 
             if (!match.Success)

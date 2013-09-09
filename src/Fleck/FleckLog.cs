@@ -16,8 +16,10 @@ namespace Fleck
 
         public static Action<LogLevel, string, Exception> LogAction = (level, message, ex) =>
         {
+#if !PORTABLE
             if (level >= Level)
                 Console.WriteLine("{0} [{1}] {2} {3}", DateTime.Now, level, message, ex);
+#endif
         };
 
         public static void Warn(string message, Exception ex = null)

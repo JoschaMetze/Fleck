@@ -1,7 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+#if !PORTABLE
 using System.Security.Cryptography;
+#else
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Digests;
+using Windows.Storage.Streams;
+//using Windows.Security.Cryptography;
+//using Windows.Security.Cryptography.Core;
+#endif
 using System.Text;
 
 namespace Fleck.Handlers
@@ -39,9 +47,12 @@ namespace Fleck.Handlers
                 var bytes = data.Skip(1).Take(endIndex - 1).ToArray();
                 
                 data.RemoveRange(0, endIndex + 1);
-                
+#if !PORTABLE
                 var message = Encoding.UTF8.GetString(bytes);
-                
+#else
+                var message = Encoding.UTF8.GetString(bytes, 0, endIndex - 1);
+#endif
+
                 onMessage(message);
             }
         }
@@ -78,8 +89,11 @@ namespace Fleck.Handlers
             var challenge = new ArraySegment<byte>(request.Bytes, request.Bytes.Length - 8, 8);
             
             var answerBytes = CalculateAnswerBytes(key1, key2, challenge);
-
+#if !PORTABLE
             byte[] byteResponse = Encoding.ASCII.GetBytes(builder.ToString());
+#else
+            byte[] byteResponse = Encoding.GetEncoding("ISO-8859-1").GetBytes(builder.ToString());
+#endif
             int byteResponseLength = byteResponse.Length;
             Array.Resize(ref byteResponse, byteResponseLength + answerBytes.Length);
             Array.Copy(answerBytes, 0, byteResponse, byteResponseLength, answerBytes.Length);
@@ -96,15 +110,61 @@ namespace Fleck.Handlers
             Array.Copy(result1Bytes, 0, rawAnswer, 0, 4);
             Array.Copy(result2Bytes, 0, rawAnswer, 4, 4);
             Array.Copy(challenge.Array, challenge.Offset, rawAnswer, 8, 8);
-            
+
+#if PORTABLE
+
+            IDigest hash = new MD5Digest();
+
+            byte[] result = new byte[hash.GetDigestSize()];
+
+
+            hash.BlockUpdate(rawAnswer, 0, rawAnswer.Length);
+
+            hash.DoFinal(result, 0);
+
+
+            return result;
+
+            //// Convert the message string to binary data.
+            //IBuffer buffUtf8Msg = CryptographicBuffer.CreateFromByteArray(rawAnswer);
+
+            //// Create a HashAlgorithmProvider object.
+            //HashAlgorithmProvider objAlgProv = HashAlgorithmProvider.OpenAlgorithm(HashAlgorithmNames.Md5);
+
+            //// Demonstrate how to retrieve the name of the hashing algorithm.
+            //String strAlgNameUsed = objAlgProv.AlgorithmName;
+
+            //// Hash the message.
+            //IBuffer buffHash = objAlgProv.HashData(buffUtf8Msg);
+
+            //// Verify that the hash length equals the length specified for the algorithm.
+            //if (buffHash.Length != objAlgProv.HashLength)
+            //{
+            //    throw new Exception("There was an error creating the hash");
+            //}
+
+            //// Convert the hash to a string (for display).
+            //String strHashBase64 = CryptographicBuffer.EncodeToBase64String(buffHash);
+
+            //byte[] resultArray = new byte[buffHash.Length];
+            //CryptographicBuffer.CopyToByteArray(buffHash, out resultArray);
+
+            //return resultArray;
+#else
             return MD5.Create().ComputeHash(rawAnswer);
+#endif
         }
 
         private static byte[] ParseKey(string key)
         {
+
+#if !PORTABLE
             int spaces = key.Count(x => x == ' ');
             var digits = new String(key.Where(Char.IsDigit).ToArray());
-
+#else
+            int spaces = key.ToCharArray().Count(x => x == ' ');
+            var digits = new String(key.ToCharArray().Where(Char.IsDigit).ToArray());
+#endif
             var value = (Int32)(Int64.Parse(digits) / spaces);
 
             byte[] result = BitConverter.GetBytes(value);

@@ -5,7 +5,11 @@ namespace Fleck
 {
     public class WebSocketHttpRequest
     {
+#if !PORTABLE
         private readonly IDictionary<string, string> _headers = new Dictionary<string, string>(System.StringComparer.InvariantCultureIgnoreCase);
+#else
+        private readonly IDictionary<string, string> _headers = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+#endif
 
         public string Method { get; set; }
 

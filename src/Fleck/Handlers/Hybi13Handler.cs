@@ -2,7 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+#if !PORTABLE
 using System.Security.Cryptography;
+#else
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Digests;
+using Windows.Storage.Streams;
+//using Windows.Security.Cryptography;
+//using Windows.Security.Cryptography.Core;
+#endif
 using System.Text;
 
 namespace Fleck.Handlers
@@ -169,7 +177,11 @@ namespace Fleck.Handlers
             builder.AppendFormat("Sec-WebSocket-Accept: {0}\r\n", responseKey);
             builder.Append("\r\n");
 
+#if !PORTABLE
             return Encoding.ASCII.GetBytes(builder.ToString());
+#else
+            return Encoding.GetEncoding("ISO-8859-1").GetBytes(builder.ToString());
+#endif
         }
 
         private const string WebSocketResponseGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -177,8 +189,46 @@ namespace Fleck.Handlers
         public static string CreateResponseKey(string requestKey)
         {
             var combined = requestKey + WebSocketResponseGuid;
-
+#if !PORTABLE
             var bytes = SHA1.Create().ComputeHash(Encoding.ASCII.GetBytes(combined));
+#else
+
+            var bytes = Encoding.GetEncoding("ISO-8859-1").GetBytes(combined);
+            IDigest hash = new Sha1Digest();
+
+            byte[] result = new byte[hash.GetDigestSize()];
+
+
+            hash.BlockUpdate(bytes, 0, bytes.Length);
+
+            hash.DoFinal(result, 0);
+
+            bytes = result;
+            
+            //// Convert the message string to binary data.
+            //IBuffer buffUtf8Msg = CryptographicBuffer.ConvertStringToBinary(combined, BinaryStringEncoding.Utf8);
+
+            //// Create a HashAlgorithmProvider object.
+            //HashAlgorithmProvider objAlgProv = HashAlgorithmProvider.OpenAlgorithm(HashAlgorithmNames.Md5);
+
+            //// Demonstrate how to retrieve the name of the hashing algorithm.
+            //String strAlgNameUsed = objAlgProv.AlgorithmName;
+
+            //// Hash the message.
+            //IBuffer buffHash = objAlgProv.HashData(buffUtf8Msg);
+
+            //// Verify that the hash length equals the length specified for the algorithm.
+            //if (buffHash.Length != objAlgProv.HashLength)
+            //{
+            //    throw new Exception("There was an error creating the hash");
+            //}
+
+            //// Convert the hash to a string (for display).
+            //String strHashBase64 = CryptographicBuffer.EncodeToBase64String(buffHash);
+
+            //byte[] bytes = new byte[buffHash.Length];
+            //CryptographicBuffer.CopyToByteArray(buffHash, out bytes);
+#endif
 
             return Convert.ToBase64String(bytes);
         }
@@ -188,7 +238,7 @@ namespace Fleck.Handlers
             var encoding = new UTF8Encoding(false, true);
             try
             {
-                return encoding.GetString(bytes);
+                return encoding.GetString(bytes, 0, bytes.Count());
             }
             catch(ArgumentException)
             {
