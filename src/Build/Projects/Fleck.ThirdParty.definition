@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ExternalProject Name="Fleck.ThirdParty">
+  
+  <Platform Type="Windows8">
+	<Binary
+		Name="BouncyCastle.Crypto"
+		Path="ThirdParty/Libs/BouncyCastle.Crypto.dll"/>
+  </Platform>
+  <Platform Type="WindowsPhone">
+  <Binary
+		Name="BouncyCastle.Crypto"
+		Path="ThirdParty/Libs/BouncyCastle.Crypto.dll"/>
+  </Platform>
+</ExternalProject>
