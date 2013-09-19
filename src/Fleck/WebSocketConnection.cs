@@ -15,6 +15,7 @@ namespace Fleck
       OnMessage = x => { };
       OnBinary = x => { };
       OnError = x => { };
+            OnPing = x => { };
       _initialize = initialize;
       _handlerFactory = handlerFactory;
       _parseRequest = parseRequest;
@@ -44,6 +45,7 @@ namespace Fleck
 
     public Action<Exception> OnError { get; set; }
 
+        public Action<byte[]> OnPing { get; set; }
     public IWebSocketConnectionInfo ConnectionInfo { get; private set; }
 
     public bool IsAvailable {
@@ -75,6 +77,18 @@ namespace Fleck
       }
 
       var bytes = Handler.FrameBinary(message);
+            SendBytes(bytes);
+        }
+        public void Pong(byte[] message)
+        {
+            if (Handler == null)
+                throw new InvalidOperationException("Cannot send before handshake");
+            if (!IsAvailable)
+            {
+                FleckLog.Warn("Data sent while closing or after close. Ignoring.");
+                return;
+            }
+            var bytes = Handler.FramePong(message);
       SendBytes(bytes);
     }
 

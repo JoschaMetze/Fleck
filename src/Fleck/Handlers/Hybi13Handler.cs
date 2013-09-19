@@ -17,7 +17,7 @@ namespace Fleck.Handlers
 {
     public static class Hybi13Handler
     {
-        public static IHandler Create(WebSocketHttpRequest request, Action<string> onMessage, Action onClose, Action<byte[]> onBinary)
+        public static IHandler Create(WebSocketHttpRequest request, Action<string> onMessage, Action onClose, Action<byte[]> onBinary,Action<byte[]> onPing)
         {
             var readState = new ReadState();
             return new ComposableHandler
@@ -26,7 +26,9 @@ namespace Fleck.Handlers
                 TextFrame = s => Hybi13Handler.FrameData(Encoding.UTF8.GetBytes(s), FrameType.Text),
                 BinaryFrame = s => Hybi13Handler.FrameData(s, FrameType.Binary),
                 CloseFrame = i => Hybi13Handler.FrameData(i.ToBigEndianBytes<ushort>(), FrameType.Close),
-                ReceiveData = d => Hybi13Handler.ReceiveData(d, readState, (op, data) => Hybi13Handler.ProcessFrame(op, data, onMessage, onClose, onBinary))
+                Ping = p => Hybi13Handler.FrameData(p,FrameType.Ping),
+                Pong = p => Hybi13Handler.FrameData(p,FrameType.Pong),
+                ReceiveData = d => Hybi13Handler.ReceiveData(d, readState, (op, data) => Hybi13Handler.ProcessFrame(op, data, onMessage, onClose, onBinary,onPing))
             };
         }
         
@@ -128,7 +130,7 @@ namespace Fleck.Handlers
             }
         }
         
-        public static void ProcessFrame(FrameType frameType, byte[] data, Action<string> onMessage, Action onClose, Action<byte[]> onBinary)
+        public static void ProcessFrame(FrameType frameType, byte[] data, Action<string> onMessage, Action onClose, Action<byte[]> onBinary,Action<byte[]>onPing)
         {
             switch (frameType)
             {
@@ -154,6 +156,10 @@ namespace Fleck.Handlers
             case FrameType.Text:
                 onMessage(ReadUTF8PayloadData(data));
                 break;
+            case FrameType.Ping:
+                {
+                    onPing(data);
+                }break;
             default:
                 FleckLog.Debug("Received unhandled " + frameType);
                 break;
