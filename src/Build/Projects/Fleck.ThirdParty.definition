@@ -11,4 +11,8 @@
 		Name="BouncyCastle.Crypto"
 		Path="ThirdParty/Libs/BouncyCastle.Crypto.dll"/>
   </Platform>
+  <Platform Type="Android">
+	<Reference Include="Mono.Android"/>
+	<Reference Include="System.Core"/>
+   </Platform>
 </ExternalProject>
