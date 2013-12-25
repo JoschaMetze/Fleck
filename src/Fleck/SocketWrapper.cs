@@ -41,6 +41,7 @@ namespace Fleck
             _tokenSource = new CancellationTokenSource();
             _taskFactory = new TaskFactory(_tokenSource.Token);
             _socket = socket;
+            NoDelay = true;
             if (_socket.Connected)
                 _stream = new NetworkStream(_socket);
         }
@@ -146,14 +147,16 @@ namespace Fleck
 
             try
             {
+                
                 Func<AsyncCallback, object, IAsyncResult> begin =
                     (cb, s) => _stream.BeginWrite(buffer, 0, buffer.Length, cb, s);
 
                 Task task = Task.Factory.FromAsync(begin, _stream.EndWrite, null);
-                task.ContinueWith(t => callback(), TaskContinuationOptions.NotOnFaulted)
+                task.ContinueWith(t=>_stream.FlushAsync())
+                    .ContinueWith(t => callback(), TaskContinuationOptions.NotOnFaulted)
                     .ContinueWith(t => error(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
                 task.ContinueWith(t => error(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
-
+                
                 return task;
             }
             catch (Exception e)

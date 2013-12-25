@@ -106,7 +106,7 @@ namespace Fleck
 
     public void Close(int code)
     {
-        if (_closing || _closed)
+      if (!IsAvailable)
         return;
 
       _closing = true;
